@@ -9,9 +9,8 @@ action = 'stop'
 points = []
 boundary_points = []
 
-def clockwiseangle_and_distance(point):
-    origin = center
-    refvec = [1, 1]
+def clockwiseangle_and_distance(origin, point):
+    refvec = [1, 0]
     # Vector between point and the origin: v = p - o
     vector = [point[0]-origin[0], point[1]-origin[1]]
     # Length of vector: ||v||
@@ -32,9 +31,6 @@ def clockwiseangle_and_distance(point):
     # but if two vectors have the same angle then the shorter distance should come first.
     return angle, lenvector
 
-def sorted_by_center(center):
-    return sorted(boundary_points, key=clockwiseangle_and_distance)
-
 
 def find_center():
     x_coords = [p[0] for p in boundary_points]
@@ -44,25 +40,43 @@ def find_center():
     centroid_y = sum(y_coords)/_len
     return [centroid_x, centroid_y]
 
-def inPolygon(x, y, p):
-    c=0
-    for i in range(len(p)):
-        if (((p[i][1]<=y and y<p[i-1][1]) or (p[i-1][1]<=y and y<p[i][1])) and
-            (x > (p[i-1][0] - p[i][0]) * (y - p[i][1]) / (p[i-1][1] - p[i][1]) + p[i][0])): c = 1 - c
-    return c
 
-def find_boundary_points():
-    global boundary_points
+def jarvismarch():
+    n = len(points)
+    P = points
+    min_point = points[0]
+    H = []
 
-    boundary_points = points
-    for current_point in points:
-        points_without_current = [x for x in points if x != current_point]
+    for i in range(1,n):
+        if points[i][1] == min_point[1] and  min_point[0] < points[i][0]:
+            min_point = points[i]
+        elif points[i][1] > min_point[1]:
+            min_point = points[i]
+    P.remove(min_point)
+    P.insert(0,min_point)
+    H.append(min_point)
 
-        for trigon_points in combinations(points_without_current, 3):
-            if inPolygon(current_point[0], current_point[1], trigon_points):
-                boundary_points= [x for x in boundary_points if x != current_point]
-
-    return boundary_points
+    while True:
+        right = 0
+        right_angle = 100
+        for i in range(1,len(P)):
+            current_angle = clockwiseangle_and_distance(H[-1],P[i])
+            print("start: ", H[-1], "end", P[i] )
+            print(current_angle)
+            current_angle = current_angle[0]
+            if current_angle < right_angle:
+                right = i
+                right_angle = current_angle
+        print(P)
+        # print(H[0])
+        print(i)
+        if len(P)== 0 or P[right]==H[0]:
+            break
+        else:
+            H.append(P[right])
+            del P[right]
+    print(H)
+    return H
 
 
 def on_click_canvas(point):
@@ -82,9 +96,9 @@ def key(event):
     print(action)
 
     if action == 'start':
-        boundary_points = find_boundary_points()
-        center = find_center()
-        boundary_points = sorted(boundary_points, key=clockwiseangle_and_distance)
+        boundary_points = jarvismarch()
+        # center = find_center()
+        # boundary_points = sorted(boundary_points, key=clockwiseangle_and_distance)
 
 canvas = Canvas(root, width=1000, height=600, bg='white')
 canvas.bind("<Button-1>", callback)
@@ -116,11 +130,6 @@ def draw():
                                                     boundary_points[right_index][1],
                                                     fill="#900C3F")
 
-        canvas.create_oval(center[0] - 3,
-                                                    center[1] - 3,
-                                                    center[0] + 3,
-                                                    center[1] + 3,
-                                                    fill="#f5ec42")
     root.after(50, draw)
 
 
