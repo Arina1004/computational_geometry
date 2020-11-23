@@ -13,6 +13,8 @@ class MyPolygon(object):
 
         self.draw_lines()
 
+        self.scale = 1
+
     def draw_lines(self):
         for line in self.lines_ids:
             self.canvas.delete(line)
@@ -61,10 +63,26 @@ class MyPolygon(object):
     def get_points(self):
         return self.points
 
+    def set_scale(self, scale):
+        if scale == self.scale:
+            return
+
+        new_points = [self.points[0]]
+
+        for i in range(len(self.points) - 1):
+            x_offset = (self.points[i + 1][0] - self.points[i][0]) * scale / self.scale
+            y_offset = (self.points[i + 1][1] - self.points[i][1]) * scale / self.scale
+
+            new_points.append([new_points[i][0] + x_offset, new_points[i][1] + y_offset])
+
+        self.points = new_points
+        self.scale = scale
+
+        self.draw_points()
+        self.draw_lines()
+
 
 class Example(Frame):
-    """Illustrate how to drag items on a Tkinter canvas"""
-
     def __init__(self, parent):
         Frame.__init__(self, parent)
 
@@ -73,16 +91,14 @@ class Example(Frame):
         self.points = []
         self.points_ids = []
 
-        # create a canvas
         self.canvas = Canvas(width=1280, height=720, background="bisque")
         self.canvas.pack(fill="both", expand=True)
 
-        # this data is used to keep track of an
-        # item being dragged
+        self.scale = Scale(parent, digits=3,command=self.change_scale, orient=HORIZONTAL, length=1000, from_=0.25, to=2,
+                           tickinterval=0.25, resolution=0.25, label="Масштаб")
+
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
 
-        # add bindings for clicking, dragging and releasing over
-        # any object with the "token" tag
         self.canvas.tag_bind("point", "<ButtonPress-3>", self.drag_start)
         self.canvas.tag_bind("point", "<ButtonRelease-3>", self.drag_stop)
         self.canvas.tag_bind("point", "<B3-Motion>", self.drag)
@@ -116,6 +132,8 @@ class Example(Frame):
 
             self.points = []
             self.points_ids = []
+
+            self.scale.pack()
 
     def drag_start(self, event):
         """Begining drag of an object"""
@@ -229,6 +247,11 @@ class Example(Frame):
                 self.change_color(self.points_ids[i], predicted_color)
                 self.points[i][2] = predicted_color
 
+    def change_scale(self, event):
+        print(event)
+        self.poly.set_scale(float(event))
+
+        self.recalculate_colors()
 
 if __name__ == "__main__":
     root = Tk()
