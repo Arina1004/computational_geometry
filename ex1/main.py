@@ -1,10 +1,16 @@
 from tkinter import *
+import math
 
 class MyPolygon(object):
     def __init__(self, points, points_ids, canvas):
         self.canvas = canvas
 
         self.points = points.copy()
+        self.initial_points = []
+
+        for point in self.points:
+            self.initial_points.append([point[0], point[1]])
+
         self.count = len(points)
 
         self.lines_ids = []
@@ -14,6 +20,11 @@ class MyPolygon(object):
         self.draw_lines()
 
         self.scale = 1
+
+        self.angle = 0
+
+        self.center = 0
+        self.calculate_center()
 
     def draw_lines(self):
         for line in self.lines_ids:
@@ -81,6 +92,27 @@ class MyPolygon(object):
         self.draw_points()
         self.draw_lines()
 
+    def rotation(self, angle):
+        self.angle = angle
+        for i in range(self.count):
+            self.points[i][0] = self.center[0] + (self.initial_points[i][0] - self.center[0]) * math.cos(angle) - (
+                    self.initial_points[i][1] - self.center[1]) * math.sin(angle)
+            self.points[i][1] = self.center[1] + (self.initial_points[i][0] - self.center[0]) * math.sin(
+                angle) + (self.initial_points[i][1] - self.center[1]) * math.cos(angle)
+
+        self.draw_points()
+        self.draw_lines()
+
+    def calculate_center(self):
+        summa_x = 0
+        summa_y = 0
+
+        for i in range(self.count):
+            summa_x += self.points[i][0]
+            summa_y += self.points[i][1]
+
+        self.center = [summa_x // self.count, summa_y // self.count]
+
 
 class Example(Frame):
     def __init__(self, parent):
@@ -91,11 +123,15 @@ class Example(Frame):
         self.points = []
         self.points_ids = []
 
-        self.canvas = Canvas(width=1280, height=720, background="bisque")
+        self.canvas = Canvas(width=1280, height=520, background="bisque")
         self.canvas.pack(fill="both", expand=True)
 
         self.scale = Scale(parent, digits=3,command=self.change_scale, orient=HORIZONTAL, length=1000, from_=0.25, to=2,
-                           tickinterval=0.25, resolution=0.25, label="Масштаб")
+                           tickinterval=0.25, resolution=0.05, label="Масштаб")
+
+        self.rotation = Scale(parent, digits=3, command=self.rotate, orient=HORIZONTAL, length=1000, from_=-180,
+                           to=180,
+                           tickinterval=30, resolution=1, label="Поворот")
 
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
 
@@ -134,6 +170,7 @@ class Example(Frame):
             self.points_ids = []
 
             self.scale.pack()
+            self.rotation.pack()
 
     def drag_start(self, event):
         """Begining drag of an object"""
@@ -248,8 +285,12 @@ class Example(Frame):
                 self.points[i][2] = predicted_color
 
     def change_scale(self, event):
-        print(event)
         self.poly.set_scale(float(event))
+
+        self.recalculate_colors()
+
+    def rotate(self, event):
+        self.poly.rotation(math.pi * int(event) / 180)
 
         self.recalculate_colors()
 
