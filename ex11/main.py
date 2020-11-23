@@ -2,6 +2,7 @@ from tkinter import *
 import math
 from itertools import *
 from more_itertools import sort_together
+import numpy as np
 
 root = Tk()
 
@@ -9,37 +10,12 @@ action = 'stop'
 points = []
 boundary_points = []
 
-def clockwiseangle_and_distance(origin, point):
-    refvec = [1, 0]
-    # Vector between point and the origin: v = p - o
-    vector = [point[0]-origin[0], point[1]-origin[1]]
-    # Length of vector: ||v||
-    lenvector = math.hypot(vector[0], vector[1])
-    # If length is zero there is no angle
-    if lenvector == 0:
-        return -math.pi, 0
-    # Normalize vector: v/||v||
-    normalized = [vector[0]/lenvector, vector[1]/lenvector]
-    dotprod  = normalized[0]*refvec[0] + normalized[1]*refvec[1]     # x1*x2 + y1*y2
-    diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]     # x1*y2 - y1*x2
-    angle = math.atan2(diffprod, dotprod)
-    # Negative angles represent counter-clockwise angles so we need to subtract them
-    # from 2*pi (360 degrees)
-    if angle < 0:
-        return 2*math.pi+angle, lenvector
-    # I return first the angle because that's the primary sorting criterium
-    # but if two vectors have the same angle then the shorter distance should come first.
-    return angle, lenvector
 
-
-def find_center():
-    x_coords = [p[0] for p in boundary_points]
-    y_coords = [p[1] for p in boundary_points]
-    _len = len(boundary_points)
-    centroid_x = sum(x_coords)/_len
-    centroid_y = sum(y_coords)/_len
-    return [centroid_x, centroid_y]
-
+def get_orientation(origin, p1, p2):
+    difference = ((p2[0] - origin[0]) * (p1[1] - origin[1])) - (
+        (p1[0] - origin[0]) * (p2[1] - origin[1])
+    )
+    return difference
 
 def jarvismarch():
     n = len(points)
@@ -47,35 +23,36 @@ def jarvismarch():
     min_point = points[0]
     H = []
 
+    #find p1
     for i in range(1,n):
         if points[i][1] == min_point[1] and  min_point[0] < points[i][0]:
             min_point = points[i]
         elif points[i][1] > min_point[1]:
             min_point = points[i]
-    P.remove(min_point)
-    P.insert(0,min_point)
+
     H.append(min_point)
 
-    while True:
-        right = 0
-        right_angle = 100
-        for i in range(1,len(P)):
-            current_angle = clockwiseangle_and_distance(H[-1],P[i])
-            print("start: ", H[-1], "end", P[i] )
-            print(current_angle)
-            current_angle = current_angle[0]
-            if current_angle < right_angle:
-                right = i
-                right_angle = current_angle
-        print(P)
-        # print(H[0])
-        print(i)
-        if len(P)== 0 or P[right]==H[0]:
-            break
-        else:
-            H.append(P[right])
-            del P[right]
-    print(H)
+    far_point = None
+    point = min_point
+    while far_point is not min_point:
+        p1 = None
+        for p in points:
+            if p is point:
+                continue
+            else:
+                p1 = p
+                break
+        far_point = p1
+
+        for p2 in points:
+            if p2 is point or p2 is p1:
+                continue
+            else:
+                direction = get_orientation(point, far_point, p2)
+                if direction > 0:
+                    far_point = p2
+        point = far_point
+        H.append(far_point)
     return H
 
 
@@ -97,8 +74,6 @@ def key(event):
 
     if action == 'start':
         boundary_points = jarvismarch()
-        # center = find_center()
-        # boundary_points = sorted(boundary_points, key=clockwiseangle_and_distance)
 
 canvas = Canvas(root, width=1000, height=600, bg='white')
 canvas.bind("<Button-1>", callback)
