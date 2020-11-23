@@ -25,7 +25,7 @@ def jarvismarch():
 
     #find p1
     for i in range(1,n):
-        if points[i][1] == min_point[1] and  min_point[0] < points[i][0]:
+        if points[i][1] == min_point[1] and  min_point[0] > points[i][0]:
             min_point = points[i]
         elif points[i][1] > min_point[1]:
             min_point = points[i]
@@ -53,6 +53,7 @@ def jarvismarch():
                     far_point = p2
         point = far_point
         H.append(far_point)
+    print(H)
     return H
 
 

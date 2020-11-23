@@ -5,4 +5,5 @@
 (Если углы равны, надо сравнивать по расстоянию). Добавляем pi+1 в ответ. Если pi+1==p0 , заканчиваем алгоритм.
 
 
-https://habr.com/ru/post/144921/
+Я нахожу самую левую точку и иду слева-направо
+https://www.youtube.com/watch?v=Vu84lmMzP2o&ab_channel=TusharRoy-CodingMadeSimple
