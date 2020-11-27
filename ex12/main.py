@@ -56,7 +56,7 @@ def graham_scan():
   sorted_points = sorted(points, key=clockwiseangle_and_distance)
   boundary_points.append(sorted_points[1])
   for s in sorted_points[2:]:
-      if rotation(boundary_points[-2], boundary_points[-1], s) >= 0:
+      while rotation(boundary_points[-2], boundary_points[-1], s) >= 0:
           del boundary_points[-1]
       boundary_points.append(s)
   print(boundary_points)
