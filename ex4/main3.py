@@ -18,8 +18,6 @@ def is_convex():
 
   for i in range(0,n):
     right_index = (i + 1) % len(points)
-    A = points[i]
-    B = points[right_index]
     for j in range(1,n):
       if rotation(points[i-1], points[i], points[right_index]) > 0:
           left = 1
