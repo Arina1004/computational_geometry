@@ -79,6 +79,7 @@ class MyPolygon(object):
             return
 
         new_points = [self.points[0]]
+        new_initial_points = [self.initial_points[0]]
 
         for i in range(len(self.points) - 1):
             x_offset = (self.points[i + 1][0] - self.points[i][0]) * scale / self.scale
@@ -86,11 +87,20 @@ class MyPolygon(object):
 
             new_points.append([new_points[i][0] + x_offset, new_points[i][1] + y_offset])
 
+        for i in range(len(self.initial_points) - 1):
+            x_offset = (self.initial_points[i + 1][0] - self.initial_points[i][0]) * scale / self.scale
+            y_offset = (self.initial_points[i + 1][1] - self.initial_points[i][1]) * scale / self.scale
+
+            new_initial_points.append([new_initial_points[i][0] + x_offset, new_initial_points[i][1] + y_offset])
+
+        self.initial_points = new_initial_points
         self.points = new_points
         self.scale = scale
 
-        self.draw_points()
+        self.calculate_center()
+
         self.draw_lines()
+        self.draw_points()
 
     def rotation(self, angle):
         self.angle = angle
@@ -133,13 +143,17 @@ class Example(Frame):
                            to=180,
                            tickinterval=30, resolution=1, label="Поворот")
 
+        self.finish_poly_button = Button(parent, text="Finish Polygon", command=self.create_poly)
+
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
 
-        self.canvas.tag_bind("point", "<ButtonPress-3>", self.drag_start)
-        self.canvas.tag_bind("point", "<ButtonRelease-3>", self.drag_stop)
-        self.canvas.tag_bind("point", "<B3-Motion>", self.drag)
-        self.canvas.tag_bind("point", "<ButtonPress-2>", self.create_poly)
-        self.canvas.bind("<Button-1>", self.create_point)
+        self.finish_poly_button.pack()
+
+        self.canvas.bind("<ButtonPress-1>", self.drag_start)
+        self.canvas.tag_bind("point", "<ButtonRelease-1>", self.drag_stop)
+        self.canvas.tag_bind("point", "<B1-Motion>", self.drag)
+        # self.canvas.tag_bind("point", "<ButtonPress-2>", self.create_poly)
+        # self.canvas.bind("<Button-1>", self.create_point)
 
     def create_point(self, event):
         """Create a token at the given coordinate in the given color"""
@@ -160,7 +174,7 @@ class Example(Frame):
             tags=("point")
         ))
 
-    def create_poly(self, event):
+    def create_poly(self):
         if not self.is_created_poly:
             self.is_created_poly = True
 
@@ -173,18 +187,25 @@ class Example(Frame):
             self.rotation.pack()
 
     def drag_start(self, event):
-        """Begining drag of an object"""
-        # record the item and its location
-        self._drag_data["item"] = self.canvas.find_closest(event.x, event.y)[0]
-        self._drag_data["x"] = event.x
-        self._drag_data["y"] = event.y
+        """Begining drag of an object. Record the item and its location"""
+        id = self.canvas.find_closest(event.x, event.y)
 
-        if self.is_intersection([event.x, event.y]) != -1:
-            self._drag_data["id"] = self.is_intersection([event.x, event.y])
-            self._drag_data["is_poly"] = False
+        if len(id) and abs((self.canvas.coords(id[0])[0] + self.canvas.coords(id[0])[2]) / 2 - event.x) \
+                + abs((self.canvas.coords(id[0])[1] + self.canvas.coords(id[0])[3]) / 2 - event.y) \
+                <= 2 * 10:
+
+            self._drag_data["item"] = id[0]
+            self._drag_data["x"] = event.x
+            self._drag_data["y"] = event.y
+
+            if self.is_intersection([event.x, event.y]) != -1:
+                self._drag_data["id"] = self.is_intersection([event.x, event.y])
+                self._drag_data["is_poly"] = False
+            else:
+                self._drag_data["is_poly"] = True
+                self._drag_data["id"] = self.poly.is_intersection([event.x, event.y])
         else:
-            self._drag_data["is_poly"] = True
-            self._drag_data["id"] = self.poly.is_intersection([event.x, event.y])
+            self.create_point(event)
 
     def drag_stop(self, event):
         """End drag of an object"""
