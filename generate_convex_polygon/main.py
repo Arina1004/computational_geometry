@@ -119,6 +119,17 @@ class Example(Frame):
                 angle_p1_q = 180 * self.get_angle(p[0], q) / math.pi
 
                 angle_last_p1 = 180 * self.get_angle(p[i - 1], p[0]) / math.pi
+				
+				tmp = [0, 0]
+
+                tmp[0] = p[i - 1][0] + r1 * math.cos(f[i] * math.pi / 180)
+                tmp[1] = p[i - 1][1] + r1 * math.sin(f[i] * math.pi / 180)
+
+                angle_p1_tmp = 180 * self.get_angle(p[0], q) / math.pi
+
+                if (angle_p1_tmp < f[1] or angle_p1_tmp > 180 + f[1]):
+                    print('oy')
+                    return p
 
                 if f[i - 1] + d1 >= angle_last_p1:
                     print('he')
