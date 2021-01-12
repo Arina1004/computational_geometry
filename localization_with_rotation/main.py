@@ -147,6 +147,7 @@ class Example(Frame):
 
         self.points = []
         self.points_ids = []
+        self.eps = 1.5
 
         self.canvas = Canvas(width=width, height=height, background="bisque")
         self.canvas.grid(row=0, column=0, columnspan=3)
@@ -268,15 +269,18 @@ class Example(Frame):
         self.canvas.delete("all")
 
     def localization_with_turn(self, point):
-        points = self.poly.points
+        sum = 0
 
-        init_sign = self.get_turn_sign([points[0], points[1]], point)
+        for i in range(len(self.poly.points)):
+            angle = abs(self.get_angle(point, self.poly.points[i]) - self.get_angle(point, self.poly.points[(i + 1) % len(self.poly.points)]))
 
-        for i in range(1, len(points)):
-            if init_sign != self.get_turn_sign([points[i], points[(i + 1) % len(points)]], point):
-                return False
+            angle = 360 - angle if angle > 180 else angle
+            sum += self.get_turn_sign([point, self.poly.points[i]], self.poly.points[(i + 1) % len(self.poly.points)]) * angle
 
-        return True
+        if abs(360 - abs(sum)) < self.eps:
+            return True
+
+        return False
 
     def change_color(self, id, color):
         self.canvas.itemconfig(id, fill=color, outline=color)
@@ -360,10 +364,19 @@ class Example(Frame):
 
         result = 1 if ((x2 - x1) * (y3 - y2) - (x3 - x2) * (y2 - y1)) > 0 else -1
 
-        print(result, sum(map(operator.mul, a, b)))
-
         return result
 
+    def dist(self, p1, p2):
+        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+    def get_angle(self, point1, point2):
+        angle_cos = math.acos((point2[0] - point1[0]) / self.dist(point1, point2))
+        angle_sin = math.asin((point2[1] - point1[1]) / self.dist(point1, point2))
+
+        if angle_sin >= 0:
+            return angle_cos * 180 / math.pi
+        else:
+            return (2 * math.pi - angle_cos) * 180 / math.pi
 if __name__ == "__main__":
     root = Tk()
     r = Example(root)
