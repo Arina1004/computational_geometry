@@ -10,7 +10,8 @@ points = []
 boundary_points = []
 
 def clockwiseangle_and_distance(point):
-    origin = center
+    global min_point
+    origin = min_point
     refvec = [1, 1]
     # Vector between point and the origin: v = p - o
     vector = [point[0]-origin[0], point[1]-origin[1]]
@@ -32,37 +33,35 @@ def clockwiseangle_and_distance(point):
     # but if two vectors have the same angle then the shorter distance should come first.
     return angle, lenvector
 
-def sorted_by_center(center):
-    return sorted(boundary_points, key=clockwiseangle_and_distance)
+def rotation(p1, p2, p3):
+    return (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p2[1] - p1[1]) * (p3[0] - p1[0])
 
+def graham_scan():
+  global min_point
+  n = len(points)
+  min_point = points[0]
+  min_point_index = 0
+  boundary_points = []
 
-def find_center():
-    x_coords = [p[0] for p in boundary_points]
-    y_coords = [p[1] for p in boundary_points]
-    _len = len(boundary_points)
-    centroid_x = sum(x_coords)/_len
-    centroid_y = sum(y_coords)/_len
-    return [centroid_x, centroid_y]
+  #find p1
+  for i in range(1,n):
+      if points[i][1] == min_point[1] and min_point[0] > points[i][0]:
+          min_point = points[i]
+          min_point_index = i
+      elif points[i][1] > min_point[1]:
+          min_point = points[i]
+          min_point_index = i
+  # del boundary_points[:min_point_index]
+  boundary_points.append(min_point)
+  sorted_points = sorted(points, key=clockwiseangle_and_distance)
+  boundary_points.append(sorted_points[1])
+  for s in sorted_points[2:]:
+      while rotation(boundary_points[-2], boundary_points[-1], s) >= 0:
+          del boundary_points[-1]
+      boundary_points.append(s)
+  print(boundary_points)
+  return boundary_points
 
-def inPolygon(x, y, p):
-    c=0
-    for i in range(len(p)):
-        if (((p[i][1]<=y and y<p[i-1][1]) or (p[i-1][1]<=y and y<p[i][1])) and
-            (x > (p[i-1][0] - p[i][0]) * (y - p[i][1]) / (p[i-1][1] - p[i][1]) + p[i][0])): c = 1 - c
-    return c
-
-def find_boundary_points():
-    global boundary_points
-
-    boundary_points = points
-    for current_point in points:
-        points_without_current = [x for x in points if x != current_point]
-
-        for trigon_points in combinations(points_without_current, 3):
-            if inPolygon(current_point[0], current_point[1], trigon_points):
-                boundary_points= [x for x in boundary_points if x != current_point]
-
-    return boundary_points
 
 
 def on_click_canvas(point):
@@ -82,9 +81,7 @@ def key(event):
     print(action)
 
     if action == 'start':
-        boundary_points = find_boundary_points()
-        center = find_center()
-        boundary_points = sorted(boundary_points, key=clockwiseangle_and_distance)
+        boundary_points = graham_scan()
 
 canvas = Canvas(root, width=1000, height=600, bg='white')
 canvas.bind("<Button-1>", callback)
@@ -92,7 +89,7 @@ canvas.bind("<Key>", key)
 canvas.pack()
 
 def draw():
-    global time, center
+    global time
     if  action == 'start':
         canvas.delete('all')
     for point in points:
@@ -116,11 +113,6 @@ def draw():
                                                     boundary_points[right_index][1],
                                                     fill="#900C3F")
 
-        canvas.create_oval(center[0] - 3,
-                                                    center[1] - 3,
-                                                    center[0] + 3,
-                                                    center[1] + 3,
-                                                    fill="#f5ec42")
     root.after(50, draw)
 
 
