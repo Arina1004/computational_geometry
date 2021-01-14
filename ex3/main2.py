@@ -54,7 +54,7 @@ def callback(event):
         on_click_canvas([event.x, event.y])
 
 def key(event):
-    global action, boundary_points, center
+    global action
 
     if action == 'move':
         action = prevAction
@@ -112,7 +112,7 @@ canvas.bind('<Motion>', move)
 canvas.pack()
 
 def draw():
-    global time, points, cpoints, action
+    global points, cpoints, action
     if action == 'init':
         cpoints = []
         canvas.delete('all')
