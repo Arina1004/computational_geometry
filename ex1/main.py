@@ -1,319 +1,117 @@
 from tkinter import *
 import math
-
-class MyPolygon(object):
-    def __init__(self, points, points_ids, canvas):
-        self.canvas = canvas
-
-        self.points = points.copy()
-        self.initial_points = []
-
-        for point in self.points:
-            self.initial_points.append([point[0], point[1]])
-
-        self.count = len(points)
-
-        self.lines_ids = []
-
-        self.points_ids = points_ids.copy()
-
-        self.draw_lines()
-
-        self.scale = 1
-
-        self.angle = 0
-
-        self.center = 0
-        self.calculate_center()
-
-    def draw_lines(self):
-        for line in self.lines_ids:
-            self.canvas.delete(line)
-
-        self.lines_ids = []
-
-        for point_id in range(self.count):
-            self.lines_ids.append(self.canvas.create_line(self.points[point_id][0],
-                           self.points[point_id][1],
-                           self.points[(point_id + 1) % self.count][0],
-                           self.points[(point_id + 1) % self.count][1]))
-
-    def draw_points(self):
-        for point in self.points_ids:
-            self.canvas.delete(point)
-
-        self.points_ids = []
-
-        for point_id in range(self.count):
-            self.points_ids.append(self.canvas.create_oval(
-                self.points[point_id][0] - 10,
-                self.points[point_id][1] - 10,
-                self.points[point_id][0] + 10,
-                self.points[point_id][1] + 10,
-                outline="#0000FF",
-                fill="#0000FF",
-                tags=("point")
-            ))
-
-    def set_vertex(self, id, point):
-        self.points[id] = point.copy()
-
-        self.draw_lines()
-        self.draw_points()
-
-    def is_intersection(self, point):
-        for i in range(self.count):
-            x_condition = self.points[i][0] - 10 <= point[0] and self.points[i][0] + 10 >= point[0]
-            y_condition = self.points[i][1] - 10 <= point[1] and self.points[i][1] + 10 >= point[1]
-
-            if x_condition and y_condition:
-                return i
-
-        return -1
-
-    def get_points(self):
-        return self.points
-
-    def set_scale(self, scale):
-        if scale == self.scale:
-            return
-
-        new_points = [self.points[0]]
-        new_initial_points = [self.initial_points[0]]
-
-        for i in range(len(self.points) - 1):
-            x_offset = (self.points[i + 1][0] - self.points[i][0]) * scale / self.scale
-            y_offset = (self.points[i + 1][1] - self.points[i][1]) * scale / self.scale
-
-            new_points.append([new_points[i][0] + x_offset, new_points[i][1] + y_offset])
-
-        for i in range(len(self.initial_points) - 1):
-            x_offset = (self.initial_points[i + 1][0] - self.initial_points[i][0]) * scale / self.scale
-            y_offset = (self.initial_points[i + 1][1] - self.initial_points[i][1]) * scale / self.scale
-
-            new_initial_points.append([new_initial_points[i][0] + x_offset, new_initial_points[i][1] + y_offset])
-
-        self.initial_points = new_initial_points
-        self.points = new_points
-        self.scale = scale
-
-        self.calculate_center()
-
-        self.draw_lines()
-        self.draw_points()
-
-    def rotation(self, angle):
-        self.angle = angle
-        for i in range(self.count):
-            self.points[i][0] = self.center[0] + (self.initial_points[i][0] - self.center[0]) * math.cos(angle) - (
-                    self.initial_points[i][1] - self.center[1]) * math.sin(angle)
-            self.points[i][1] = self.center[1] + (self.initial_points[i][0] - self.center[0]) * math.sin(
-                angle) + (self.initial_points[i][1] - self.center[1]) * math.cos(angle)
-
-        self.draw_points()
-        self.draw_lines()
-
-    def calculate_center(self):
-        summa_x = 0
-        summa_y = 0
-
-        for i in range(self.count):
-            summa_x += self.points[i][0]
-            summa_y += self.points[i][1]
-
-        self.center = [summa_x // self.count, summa_y // self.count]
-
+import random
 
 class Example(Frame):
     def __init__(self, parent):
         Frame.__init__(self, parent)
 
-        self.poly = None
-        self.is_created_poly = False
-        self.points = []
-        self.points_ids = []
+        self.width = 1280
+        self.height = 520
 
-        self.canvas = Canvas(width=1280, height=520, background="bisque")
+        self.canvas = Canvas(width=self.width, height=self.height, background="bisque")
         self.canvas.pack(fill="both", expand=True)
 
-        self.scale = Scale(parent, digits=3,command=self.change_scale, orient=HORIZONTAL, length=1000, from_=0.25, to=2,
-                           tickinterval=0.25, resolution=0.05, label="Масштаб")
+        self.d1_d2_label = Label(parent, text="D1 D2", font="Arial 14")
+        self.r1_r2_label = Label(parent, text="R1 R2", font="Arial 14")
 
-        self.rotation = Scale(parent, digits=3, command=self.rotate, orient=HORIZONTAL, length=1000, from_=-180,
-                           to=180,
-                           tickinterval=30, resolution=1, label="Поворот")
+        self.d1_ent = Entry(parent, width=20, bd=3)
+        self.d2_ent = Entry(parent, width=20, bd=3)
+        self.r1_ent = Entry(parent, width=20, bd=3)
+        self.r2_ent = Entry(parent, width=20, bd=3)
 
-        self.finish_poly_button = Button(parent, text="Finish Polygon", command=self.create_poly)
+        self.ent = Entry(root, width=20,bd=3)
+        self.but = Button(root,
+            command=self.create_poly,
+            text="Создать", # надпись на кнопке
+            width=15, height=1,  # ширина и высота
+            bg="white", fg="blue") # цвет фона и надписи
 
-        self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
-
-        self.finish_poly_button.pack()
-
-        self.canvas.bind("<ButtonPress-1>", self.drag_start)
-        self.canvas.tag_bind("point", "<ButtonRelease-1>", self.drag_stop)
-        self.canvas.tag_bind("point", "<B1-Motion>", self.drag)
-        # self.canvas.tag_bind("point", "<ButtonPress-2>", self.create_poly)
-        # self.canvas.bind("<Button-1>", self.create_point)
-
-    def create_point(self, event):
-        """Create a token at the given coordinate in the given color"""
-        print("Created!")
-        color = "#0000FF"
-
-        if self.is_created_poly:
-            color = "#00FF00" if self.localization([event.x, event.y]) else "#FF0000"
-
-        self.points.append([event.x, event.y, color])
-        self.points_ids.append(self.canvas.create_oval(
-            event.x - 10,
-            event.y - 10,
-            event.x + 10,
-            event.y + 10,
-            outline=color,
-            fill=color,
-            tags=("point")
-        ))
+        self.d1_d2_label.pack()
+        self.d1_ent.pack()
+        self.d2_ent.pack()
+        self.r1_r2_label.pack()
+        self.r1_ent.pack()
+        self.r2_ent.pack()
+        self.but.pack()
 
     def create_poly(self):
-        if not self.is_created_poly:
-            self.is_created_poly = True
+        if self.d1_ent.get() and self.d2_ent.get() and self.r1_ent.get() and self.r2_ent.get():
 
-            self.poly = MyPolygon(self.points, self.points_ids, self.canvas)
+            points = self.generate( int(self.d1_ent.get()), int(self.d2_ent.get()), int(self.r1_ent.get()), int(self.r2_ent.get()))
 
-            self.points = []
-            self.points_ids = []
+            for point_id in range(len(points)):
+                self.canvas.create_oval(
+                    points[point_id][0] - 5,
+                    points[point_id][1] - 5,
+                    points[point_id][0] + 5,
+                    points[point_id][1] + 5,
+                    outline="#FF0000",
+                    fill="#FF0000",
+                    tags=("point")
+                )
 
-            self.scale.pack()
-            self.rotation.pack()
-
-    def drag_start(self, event):
-        """Begining drag of an object. Record the item and its location"""
-        id = self.canvas.find_closest(event.x, event.y)
-
-        if len(id) and abs((self.canvas.coords(id[0])[0] + self.canvas.coords(id[0])[2]) / 2 - event.x) \
-                + abs((self.canvas.coords(id[0])[1] + self.canvas.coords(id[0])[3]) / 2 - event.y) \
-                <= 2 * 10:
-
-            self._drag_data["item"] = id[0]
-            self._drag_data["x"] = event.x
-            self._drag_data["y"] = event.y
-
-            if self.is_intersection([event.x, event.y]) != -1:
-                self._drag_data["id"] = self.is_intersection([event.x, event.y])
-                self._drag_data["is_poly"] = False
-            else:
-                self._drag_data["is_poly"] = True
-                self._drag_data["id"] = self.poly.is_intersection([event.x, event.y])
+                self.canvas.create_line(points[point_id][0],
+                                        points[point_id][1],
+                                        points[(point_id + 1) % len(points)][0],
+                                        points[(point_id + 1) % len(points)][1])
         else:
-            self.create_point(event)
+            print('No')
 
-    def drag_stop(self, event):
-        """End drag of an object"""
-        # reset the drag information
-        if self._drag_data["is_poly"]:
-            self.poly.set_vertex(self._drag_data["id"], [event.x, event.y])
-        else:
-            self.points[self._drag_data["id"]][0] = event.x
-            self.points[self._drag_data["id"]][1] = event.y
+    def generate(self, d1, d2, r1, r2):
+        ctr = [int(random.random() * self.width / 2), int(random.random() * self.height / 2)]
 
-        self._drag_data["item"] = None
-        self._drag_data["id"] = -1
-        self._drag_data["x"] = 0
-        self._drag_data["y"] = 0
-        self._drag_data["is_poly"] = False
+        p = []
 
-        self.recalculate_colors()
+        f = [0]
 
-    def drag(self, event):
-        """Handle dragging of an object"""
-        delta_x = event.x - self._drag_data["x"]
-        delta_y = event.y - self._drag_data["y"]
+        r = []
 
-        self.canvas.move(self._drag_data["item"], delta_x, delta_y)
+        for i in range(1000):
+            delta = d1 + random.random() * (d2 - d1)
 
-        # record the new position
-        self._drag_data["x"] = event.x
-        self._drag_data["y"] = event.y
+            if f[i] + d1 > 360:
+                return p
 
-        if self._drag_data["is_poly"]:
-            self.poly.get_points()[self._drag_data["id"]] = [event.x, event.y]
-            self.poly.draw_lines()
-        else:
-            self.points[self._drag_data["id"]][0] = event.x
-            self.points[self._drag_data["id"]][1] = event.y
+            while f[i] + delta >= 360:
+                delta = d1 + random.random() * (d2 - d1)
 
-    def is_intersection(self, point):
-        for i in range(len(self.points)):
-            x_condition = self.points[i][0] - 10 <= point[0] and self.points[i][0] + 10 >= point[0]
-            y_condition = self.points[i][1] - 10 <= point[1] and self.points[i][1] + 10 >= point[1]
+            f.append(f[i] + delta)
+            r.append(r1 + random.random() * (r2 - r1))
 
-            if x_condition and y_condition:
-                return i
+            q = [0, 0]
 
-        return -1
+            q[0] = ctr[0] + r[i] * math.cos(f[i + 1] * math.pi / 180)
+            q[1] = ctr[1] + r[i] * math.sin(f[i + 1] * math.pi / 180)
 
-    def localization(self, point):
-        x = point[0]
-        y = point[1]
+            # if i > 1:
+            #     angle_p1_q = 180 * self.get_angle(p[0], q) / math.pi
+            #
+            #     angle_last_p1 = 180 * self.get_angle(p[i - 1], p[0]) / math.pi
+            #
+            #     if f[i - 1] + d1 >= angle_last_p1:
+            #         print('he')
+            #         return p
+            #
+            #     while i > 1 and (angle_p1_q < f[1] or angle_p1_q > 180 + f[1]) or (f[i] > angle_last_p1):
+            #         delta = d1 + random.random() * (d2 - d1)
+            #
+            #         f[i] = f[i - 1] + delta
+            #         r[i] = r1 + random.random() * (r2 - r1)
+            #
+            #         q = [0, 0]
+            #
+            #         q[0] = ctr[0] + r[i] * math.cos(f[i] * math.pi / 180)
+            #         q[1] = ctr[1] + r[i] * math.sin(f[i] * math.pi / 180)
+            #
+            #     p.append(q)
+            #
+            #     if int(angle_last_p1) == int(180 + angle_p1_q):
+            #         print('!!!!', len(p))
+            #         return p
+            # else:
 
-        neighbors = []
-
-        vertexes = self.poly.get_points()
-
-        count = len(vertexes)
-
-        for i in range(count):
-            x1 = vertexes[i][0]
-            x2 = vertexes[(i + 1) % count][0]
-            y1 = vertexes[i][1]
-            y2 = vertexes[(i + 1) % count][1]
-
-            if y2 > y and y1 <= y or y1 > y and y2 <= y:
-                neighbors.append(((x1-x2) * y + x2 * y1 - x1 * y2)/(y1 - y2))
-
-        if len(neighbors) < 2:
-            return False
-        else:
-            left = []
-            right = []
-
-            for i in range(len(neighbors)):
-                if x > neighbors[i]:
-                    left.append(neighbors[i])
-                elif x < neighbors[i]:
-                    right.append(neighbors[i])
-
-            if len(left) == len(right):
-                if len(left) % 2:
-                    return True
-                else:
-                    return False
-            else:
-                if len(left) % 2:
-                    return True
-
-                return False
-
-    def change_color(self, id, color):
-        self.canvas.itemconfig(id, fill=color, outline=color)
-
-    def recalculate_colors(self):
-        for i in range(len(self.points)):
-            predicted_color = "#00FF00" if self.localization(self.points[i]) else "#FF0000"
-
-            if self.points[i][2] != predicted_color:
-                self.change_color(self.points_ids[i], predicted_color)
-                self.points[i][2] = predicted_color
-
-    def change_scale(self, event):
-        self.poly.set_scale(float(event))
-
-        self.recalculate_colors()
-
-    def rotate(self, event):
-        self.poly.rotation(math.pi * int(event) / 180)
-
-        self.recalculate_colors()
+            p.append(q)
 
 if __name__ == "__main__":
     root = Tk()

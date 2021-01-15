@@ -1,19 +1,17 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
 from tkinter import *
-from xml.dom import minidom
-import xml.etree.cElementTree as ET
-from tkinter import filedialog as fd
 import math
-import operator
-
+from ex3.main import is_convex
+from ex4.main1 import localization as localization_n
+from ex4.main2 import localization as localization_logn
+from ex5.main import clockwise
+from ex6.main import localization_with_turn
+from ex8.main import convex_hull
 
 radius = 3
-width = 1200
-height = 500
+width = 1000
+height = 400
 
-class MyPolygon(object):
+class Polygon(object):
     def __init__(self, points, points_ids, canvas):
         self.point_radius = radius
         self.canvas = canvas
@@ -40,7 +38,17 @@ class MyPolygon(object):
         self.center = 0
         self.calculate_center()
 
-    def draw_lines(self):
+    def calculate_center(self):
+        summa_x = 0
+        summa_y = 0
+
+        for i in range(self.count):
+            summa_x += self.points[i][0]
+            summa_y += self.points[i][1]
+
+        self.center = [summa_x // self.count, summa_y // self.count]
+
+    def draw_lines(self, color='black'):
         for line in self.lines_ids:
             self.canvas.delete(line)
 
@@ -50,7 +58,7 @@ class MyPolygon(object):
             self.lines_ids.append(self.canvas.create_line(self.points[point_id][0],
                            self.points[point_id][1],
                            self.points[(point_id + 1) % self.count][0],
-                           self.points[(point_id + 1) % self.count][1]))
+                           self.points[(point_id + 1) % self.count][1], fill=color, width=2))
 
     def draw_points(self):
         for point in self.points_ids:
@@ -64,8 +72,8 @@ class MyPolygon(object):
                 self.points[point_id][1] - self.point_radius,
                 self.points[point_id][0] + self.point_radius,
                 self.points[point_id][1] + self.point_radius,
-                outline="#0000FF",
-                fill="#0000FF",
+                outline="#6C60A1",
+                fill="#6C60A1",
                 tags=("point")
             ))
 
@@ -127,70 +135,72 @@ class MyPolygon(object):
         self.draw_lines()
         self.draw_points()
 
-    def calculate_center(self):
-        summa_x = 0
-        summa_y = 0
 
-        for i in range(self.count):
-            summa_x += self.points[i][0]
-            summa_y += self.points[i][1]
-
-        self.center = [summa_x // self.count, summa_y // self.count]
-
-class Example(Frame):
+class Interface(Frame):
     def __init__(self, parent):
+        self.poly = False
         self.point_radius = radius
 
         Frame.__init__(self, parent)
 
-        self.poly = False
+        self.mode = 'init'
 
         self.points = []
         self.points_ids = []
-        self.eps = 1.5
 
-        self.canvas = Canvas(width=width, height=height, background="bisque")
+        self.canvas = Canvas(width=width, height=height, background="#CBC3F0")
         self.canvas.grid(row=0, column=0, columnspan=3)
 
         self.scale = Scale(parent, digits=3,command=self.change_scale, orient=HORIZONTAL, length=300, from_=0.25, to=2,
                            tickinterval=0.25, resolution=0.05, label="Масштаб")
         self.scale.set(1)
 
-        self.rotation = Scale(parent, digits=3, command=self.rotate, orient=HORIZONTAL, length=300, from_=-180,
+        self.rotation = Scale(parent, digits=3, command=self.rotate, orient=HORIZONTAL, length=400, from_=-180,
                            to=180,
                            tickinterval=30, resolution=1, label="Поворот")
 
-        self.loading = Button(parent, text="Import Polygon", command= self.import_polygons, width=20, height=2)
-        self.export = Button(parent, text="Export Polygons", command= self.export_polygons, width=20, height=2)
-        self.reset = Button(parent, text="Reset", command= self.reset_canvas, width=20, height=2)
+        self.reset = Button(parent, text="Очистить", command= self.reset_canvas, width=20, height=2)
 
-        self.reset.grid(row=3, column=2, sticky=W)
-        self.loading.grid(row=1, column=1, sticky=W)
-        self.export.grid(row=3, column=1, sticky=W)
         self.scale.grid(row=2, column=0, columnspan=2, sticky=W)
-        self.rotation.grid(row=3, column=0, columnspan=2, sticky=W)
+        self.rotation.grid(row=2, column=1, columnspan=2, sticky=W, padx=40)
+        self.reset.grid(row=2, column=2, sticky=E)
+
+        self.convex = Button(parent, text="3. Выпуклость", command= self.is_convex, width=20, height=2)
+        self.convex.grid(row=3, column=0, columnspan=2, sticky=W, pady=10)
+
+        self.localizationN = Button(parent, text="4.1 Локализация (n)", command= self.localization_n, width=20, height=2)
+        self.localizationN.grid(row=3, column=1, columnspan=2, sticky=W)
+
+        self.localizationLOGN = Button(parent, text="4.2 Локализация (log n)", command= self.localization_logn, width=20, height=2)
+        self.localizationLOGN.grid(row=3, column=2, columnspan=2, sticky=W)
+
+        self.clockwise = Button(parent, text="5. Направление", command= self.determine_clockwise, width=20, height=2)
+        self.clockwise.grid(row=4, column=0, columnspan=2, sticky=W, pady=10)
+
+        self.localizationWT = Button(parent, text="6. Локализация (п)", command= self.localization_wt, width=20, height=2)
+        self.localizationWT.grid(row=4, column=1, columnspan=2, sticky=W)
+
+        self.convexH = Button(parent, text="8. Оболочка", command= self.convex_hull, width=20, height=2)
+        self.convexH.grid(row=5, column=0, columnspan=2, sticky=W)
 
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
 
         self.canvas.tag_bind("point", "<ButtonPress-3>", self.drag_start)
         self.canvas.tag_bind("point", "<ButtonRelease-3>", self.drag_stop)
         self.canvas.tag_bind("point", "<B3-Motion>", self.drag)
-        self.canvas.bind("<ButtonPress-2>", self.finish_poly)
+        self.canvas.bind("<ButtonPress-2>", self.create_poly)
         self.canvas.bind("<Button-1>", self.create_point)
 
-    def finish_poly(self, event):
-        if len(self.points) > 2:
-            self.create_poly(self.points, self.points_ids)
-
-            self.points = []
-            self.points_ids = []
-
     def create_point(self, event):
-        """Create a token at the given coordinate in the given color"""
-        color = "#0000FF"
+        color = "#6C60A1"
 
         if self.poly:
-            color = "#00FF00" if self.localization_with_turn([event.x, event.y]) else "#FF0000"
+          if self.mode == 'localization_n':
+            color = "#60A181" if localization_n(self.poly.points, [event.x, event.y]) else "#6C60A1"
+          elif self.mode == 'localization_logn':
+            color = "#60A181" if localization_logn(self.poly.points, self.poly.center, [event.x, event.y]) else "#6C60A1"
+          elif self.mode == 'localization_wt':
+            color = "#60A181" if localization_with_turn(self.poly.points, [event.x, event.y], 1.5) else "#6C60A1"
 
         self.points.append([event.x, event.y, color])
         self.points_ids.append(self.canvas.create_oval(
@@ -203,17 +213,15 @@ class Example(Frame):
             tags=("point")
         ))
 
-    def create_poly(self, points, points_ids):
-        if len(points) > 2:
-            self.poly = MyPolygon(points, points_ids, self.canvas)
+    def create_poly(self, event):
+        if not self.poly:
+            self.poly = Polygon(self.points, self.points_ids, self.canvas)
+
+            self.points = []
+            self.points_ids = []
 
     def drag_start(self, event):
-        """Begining drag of an object"""
-        # record the item and its location
-        id = self.canvas.find_closest(event.x, event.y)[0]
-
-
-        self._drag_data["item"] = id
+        self._drag_data["item"] = self.canvas.find_closest(event.x, event.y)[0]
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
@@ -229,8 +237,6 @@ class Example(Frame):
                 self._drag_data["id"] = point_id
 
     def drag_stop(self, event):
-        """End drag of an object"""
-        # reset the drag information
         if self._drag_data["is_poly"]:
             self.poly.set_vertex(self._drag_data["id"], [event.x, event.y])
         else:
@@ -246,13 +252,11 @@ class Example(Frame):
         self.recalculate_colors()
 
     def drag(self, event):
-        """Handle dragging of an object"""
         delta_x = event.x - self._drag_data["x"]
         delta_y = event.y - self._drag_data["y"]
 
         self.canvas.move(self._drag_data["item"], delta_x, delta_y)
 
-        # record the new position
         self._drag_data["x"] = event.x
         self._drag_data["y"] = event.y
 
@@ -265,33 +269,10 @@ class Example(Frame):
 
     def reset_canvas(self):
         self.poly = False
+        self.mode = 'init'
         self.points = []
+        self.points_ids = []
         self.canvas.delete("all")
-
-    def localization_with_turn(self, point):
-        sum = 0
-
-        for i in range(len(self.poly.points)):
-            angle = abs(self.get_angle(point, self.poly.points[i]) - self.get_angle(point, self.poly.points[(i + 1) % len(self.poly.points)]))
-
-            angle = 360 - angle if angle > 180 else angle
-            sum += self.get_turn_sign([point, self.poly.points[i]], self.poly.points[(i + 1) % len(self.poly.points)]) * angle
-
-        if abs(360 - abs(sum)) < self.eps:
-            return True
-
-        return False
-
-    def change_color(self, id, color):
-        self.canvas.itemconfig(id, fill=color, outline=color)
-
-    def recalculate_colors(self):
-        for i in range(len(self.points)):
-            predicted_color = "#00FF00" if self.localization_with_turn(self.points[i]) else "#FF0000"
-
-            if self.points[i][2] != predicted_color:
-                self.change_color(self.points_ids[i], predicted_color)
-                self.points[i][2] = predicted_color
 
     def is_intersection(self, point):
         for i in range(len(self.points)):
@@ -315,71 +296,78 @@ class Example(Frame):
 
             self.recalculate_colors()
 
-    def import_polygons(self):
-        color = "#0000FF"
+    def localization_n(self):
+        self.mode = 'localization_n'
+        self.recalculate_colors()
+    
+    def localization_logn(self):
+        self.mode = 'localization_logn'
+        self.recalculate_colors()
 
-        file_name = fd.askopenfilename()
-        tree = ET.ElementTree(file=file_name)
+    def change_color(self, id, color):
+        self.canvas.itemconfig(id, fill=color, outline=color)
 
-        for polygon in tree.getroot():
-            points = []
-            points_ids = []
-            for point in polygon:
-                points.append([int(point.attrib['x']), int(point.attrib['y']), color])
-                points_ids.append(self.canvas.create_oval(
-                    int(point.attrib['x']) - self.point_radius,
-                    int(point.attrib['y']) - self.point_radius,
-                    int(point.attrib['x']) + self.point_radius,
-                    int(point.attrib['y']) + self.point_radius,
-                    outline=color,
-                    fill=color,
-                    tags=("point")
-                ))
+    def recalculate_colors(self):
+        for i in range(len(self.points)):
+          predicted_color = "#6C60A1"
+          if self.mode == 'localization_n':
+            predicted_color = "#60A181" if localization_n(self.poly.points, self.points[i]) else "#6C60A1"
+          elif self.mode == 'localization_logn':
+            predicted_color = "#60A181" if localization_logn(self.poly.points, self.poly.center, self.points[i]) else "#6C60A1"
+          elif self.mode == 'localization_wt':
+            predicted_color = "#60A181" if localization_with_turn(self.poly.points, self.points[i], 1.5) else "#6C60A1"
+          if self.points[i][2] != predicted_color:
+              self.change_color(self.points_ids[i], predicted_color)
+              self.points[i][2] = predicted_color
 
-            self.create_poly(points, points_ids)
-            return
+    def is_convex(self):
+      self.mode = 'convex'
+      color = '#867ABF' if is_convex(self.poly.get_points()) else '#CA6F6F'
+      self.poly.draw_lines(color)
 
-    def export_polygons(self):
-        file_name = fd.asksaveasfilename()
-        root = ET.Element("polygons")
+    def determine_clockwise(self):
+      result = 'По ЧС' if clockwise(self.poly.points) else 'Не по ЧС'
+      self.canvas.create_text(50, 20, text=result)
+    
+    def localization_wt(self):
+      self.mode = 'localization_wt'
+      self.recalculate_colors()
 
-        polygon = ET.Element("polygon")
-        root.append(polygon)
-        for _point in self.poly.points:
-            point = ET.SubElement(polygon, "point")
-            point.attrib['x'] = str(_point[0])
-            point.attrib['y'] = str(_point[1])
-        tree = ET.ElementTree(root)
-        tree.write(file_name)
+    def convex_hull(self):
+      self.mode = 'convex_hull'
+      self.poly = False
+      self.points_ids = []
+      color = "#6C60A1"
+      self.canvas.delete('all')
+      for p in self.points:
+        self.points_ids.append(self.canvas.create_oval(
+            p[0] - self.point_radius,
+            p[1] - self.point_radius,
+            p[0]+ self.point_radius,
+            p[1] + self.point_radius,
+            outline=color,
+            fill=color,
+            tags=("point")
+        ))
+      result = convex_hull(self.points)
+      b_points = result[0]
+      b_points_id = []
+      print(result)
+      for point in b_points:
+        b_points_id.append(self.points_ids[self.points.index(point)])
 
-    def get_turn_sign(self, vector, point):
-        x1, y1 = vector[0][:2]
+      self.poly = Polygon(b_points, b_points_id, self.canvas)
+      self.canvas.create_oval(
+          result[1][0] - self.point_radius,
+          result[1][1] - self.point_radius,
+          result[1][0]+ self.point_radius,
+          result[1][1] + self.point_radius,
+          outline='#E8A4DB',
+          fill='#E380D1',
+          tags=("point")
+      )
 
-        x2, y2 = vector[1][:2]
-
-        x3, y3 = point[:2]
-
-        a = (x2 - x1, y2 - y1)
-        b = (x3 - x2, y3 - y2)
-
-        result = 1 if ((x2 - x1) * (y3 - y2) - (x3 - x2) * (y2 - y1)) > 0 else -1
-
-        return result
-
-    def dist(self, p1, p2):
-        return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
-
-    def get_angle(self, point1, point2):
-        angle_cos = math.acos((point2[0] - point1[0]) / self.dist(point1, point2))
-        angle_sin = math.asin((point2[1] - point1[1]) / self.dist(point1, point2))
-
-        if angle_sin >= 0:
-            return angle_cos * 180 / math.pi
-        else:
-            return (2 * math.pi - angle_cos) * 180 / math.pi
 if __name__ == "__main__":
     root = Tk()
-    r = Example(root)
-    # Example(root).pack(fill="both", expand=True)
-    r.grid()
+    Interface(root).grid()
     root.mainloop()
