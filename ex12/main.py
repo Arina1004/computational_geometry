@@ -47,19 +47,6 @@ class Line(object):
     def set_angle(self, angle):
         self.angle = angle
 
-        # self.draw()
-
-    # def rotation(self, angle):
-    #     self.angle = angle
-    #     for i in range(self.count):
-    #         self.points[i][0] = self.center[0] + (self.initial_points[i][0] - self.center[0]) * math.cos(angle) - (
-    #                 self.initial_points[i][1] - self.center[1]) * math.sin(angle)
-    #         self.points[i][1] = self.center[1] + (self.initial_points[i][0] - self.center[0]) * math.sin(
-    #             angle) + (self.initial_points[i][1] - self.center[1]) * math.cos(angle)
-    #
-    #     self.draw_lines()
-    #     self.draw_points()
-
 class Example(Frame):
     def __init__(self, parent):
         self.point_radius = radius
@@ -72,14 +59,14 @@ class Example(Frame):
         self.points = []
         self.points_ids = []
 
-        self.canvas = Canvas(width=width, height=height, background="bisque")
+        self.canvas = Canvas(width=width, height=height, background="#CBC3F0")
         self.canvas.grid(row=0, column=0, columnspan=3)
 
-        self.reset = Button(parent, text="Reset", command= self.reset_canvas, width=20, height=2)
-        self.process = Button(parent, text="Generate Lines", command=self.process, width=20, height=2)
+        self.reset = Button(parent, text="Очистить", command= self.reset_canvas, width=20, height=2)
+        self.process = Button(parent, text="12. Построить прямые", command=self.parallel_lines, width=20, height=2)
 
-        self.reset.grid(row=3, column=2, sticky=W)
-        self.process.grid(row=1, column=1, sticky=W)
+        self.reset.grid(row=2, column=1, sticky=W)
+        self.process.grid(row=2, column=0, sticky=W)
 
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1}
 
@@ -90,7 +77,7 @@ class Example(Frame):
 
     def create_point(self, event):
         """Create a token at the given coordinate in the given color"""
-        color = "#00FF0F"
+        color = "#6C60A1"
 
         self.points.append([event.x, event.y, color])
         self.points_ids.append(self.canvas.create_oval(
@@ -196,7 +183,7 @@ class Example(Frame):
 
         return -1
 
-    def process(self):
+    def parallel_lines(self):
         convex_poly = self.jarvismarch()
 
         convex_poly.pop()
@@ -206,8 +193,8 @@ class Example(Frame):
             convex_poly[0][1] - self.point_radius,
             convex_poly[0][0] + self.point_radius,
             convex_poly[0][1] + self.point_radius,
-            outline='#FF0000',
-            fill='#FF0000',
+            outline='#6C60A1',
+            fill='#6C60A1',
             tags=("point")
         )
 
@@ -216,8 +203,8 @@ class Example(Frame):
             convex_poly[1][1] - self.point_radius,
             convex_poly[1][0] + self.point_radius,
             convex_poly[1][1] + self.point_radius,
-            outline='#0000FF',
-            fill='#0000FF',
+            outline='#6C60A1',
+            fill='#6C60A1',
             tags=("point")
         )
 
@@ -241,8 +228,8 @@ class Example(Frame):
                 min_y = convex_poly[point_id][1]
                 min_point = [convex_poly[point_id].copy(), point_id]
 
-        self.line_1 = Line(min_point[0], min_point[1], self.canvas, '#00FF00')
-        self.line_2 = Line(max_point[0], max_point[1], self.canvas, '#FF0000')
+        self.line_1 = Line(min_point[0], min_point[1], self.canvas, '#60A181')
+        self.line_2 = Line(max_point[0], max_point[1], self.canvas, '#60A181')
 
         summary_angle = 0
 
@@ -301,8 +288,8 @@ class Example(Frame):
         self.line_1.set_angle(min_angle)
         self.line_2.set_angle(min_angle)
 
-        self.line_1.color = '#0000FF'
-        self.line_2.color = '#00FFFF'
+        self.line_1.color = '#60A181'
+        self.line_2.color = '#60A181'
 
         self.line_1.set_point(min_pt1_id, convex_poly[min_pt1_id])
         self.line_2.set_point(min_pt2_id, convex_poly[min_pt2_id])

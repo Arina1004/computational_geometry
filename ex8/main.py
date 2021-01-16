@@ -29,9 +29,6 @@ def clockwiseangle_and_distance(point):
     # but if two vectors have the same angle then the shorter distance should come first.
     return angle, lenvector
 
-def sorted_by_center():
-    return sorted(boundary_points, key=clockwiseangle_and_distance)
-
 def find_center():
     x_coords = [p[0] for p in boundary_points]
     y_coords = [p[1] for p in boundary_points]

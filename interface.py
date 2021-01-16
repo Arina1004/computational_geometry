@@ -6,6 +6,9 @@ from ex4.main2 import localization as localization_logn
 from ex5.main import clockwise
 from ex6.main import localization_with_turn
 from ex8.main import convex_hull
+from ex9.main import jarvismarch
+from ex10.main import graham_scan
+from ex11.main import scan
 
 radius = 3
 width = 1000
@@ -182,6 +185,15 @@ class Interface(Frame):
 
         self.convexH = Button(parent, text="8. Оболочка", command= self.convex_hull, width=20, height=2)
         self.convexH.grid(row=5, column=0, columnspan=2, sticky=W)
+
+        self.jarvismarchB = Button(parent, text="9. Джарвис", command= self.jarvismarch, width=20, height=2)
+        self.jarvismarchB.grid(row=5, column=1, columnspan=2, sticky=W)
+
+        self.grahamB = Button(parent, text="10. Грехем", command= self.graham, width=20, height=2)
+        self.grahamB.grid(row=5, column=2, columnspan=2, sticky=W)
+
+        self.iterB = Button(parent, text="11. Итерационный", command= self.convex_iter, width=20, height=2)
+        self.iterB.grid(row=5, column=3, columnspan=2, sticky=W)
 
         self._drag_data = {"x": 0, "y": 0, "item": None, "id": -1, "is_poly": False}
 
@@ -366,6 +378,75 @@ class Interface(Frame):
           fill='#E380D1',
           tags=("point")
       )
+
+    def jarvismarch(self):
+      self.mode = 'jarvismarch'
+      self.poly = False
+      self.points_ids = []
+      color = "#6C60A1"
+      self.canvas.delete('all')
+      for p in self.points:
+        self.points_ids.append(self.canvas.create_oval(
+            p[0] - self.point_radius,
+            p[1] - self.point_radius,
+            p[0]+ self.point_radius,
+            p[1] + self.point_radius,
+            outline=color,
+            fill=color,
+            tags=("point")
+        ))
+      b_points = jarvismarch(self.points)
+      b_points_id = []
+      for point in b_points:
+        b_points_id.append(self.points_ids[self.points.index(point)])
+
+      self.poly = Polygon(b_points, b_points_id, self.canvas)
+
+    def graham(self):
+      self.mode = 'graham'
+      self.poly = False
+      self.points_ids = []
+      color = "#6C60A1"
+      self.canvas.delete('all')
+      for p in self.points:
+        self.points_ids.append(self.canvas.create_oval(
+            p[0] - self.point_radius,
+            p[1] - self.point_radius,
+            p[0]+ self.point_radius,
+            p[1] + self.point_radius,
+            outline=color,
+            fill=color,
+            tags=("point")
+        ))
+      b_points = graham_scan(self.points)
+      b_points_id = []
+      for point in b_points:
+        b_points_id.append(self.points_ids[self.points.index(point)])
+
+      self.poly = Polygon(b_points, b_points_id, self.canvas)
+      
+    def convex_iter(self):
+      self.mode = 'iter'
+      self.poly = False
+      self.points_ids = []
+      color = "#6C60A1"
+      self.canvas.delete('all')
+      for p in self.points:
+        self.points_ids.append(self.canvas.create_oval(
+            p[0] - self.point_radius,
+            p[1] - self.point_radius,
+            p[0]+ self.point_radius,
+            p[1] + self.point_radius,
+            outline=color,
+            fill=color,
+            tags=("point")
+        ))
+      b_points = scan(self.points)
+      b_points_id = []
+      for point in b_points:
+        b_points_id.append(self.points_ids[self.points.index(point)])
+
+      self.poly = Polygon(b_points, b_points_id, self.canvas)
 
 if __name__ == "__main__":
     root = Tk()

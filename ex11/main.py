@@ -1,12 +1,5 @@
-from tkinter import *
 import math
-from itertools import *
-from more_itertools import sort_together
 
-root = Tk()
-
-action = 'stop'
-points = []
 boundary_points = []
 
 def clockwise(points):
@@ -69,7 +62,7 @@ def crossing(point, vertex, boundary_points):
     return False
 
 
-def graham_scan():
+def scan(points):
     global min_point, current_point
     n = len(points)
     boundary_points = points[:3]
@@ -106,10 +99,6 @@ def graham_scan():
                 left_point_index = (left_point_index + 1) % len(boundary_points)
             while crossing(current_point, boundary_points[right_point_index], boundary_points):
                 right_point_index = right_point_index - 1
-            # print("boundary_points:", boundary_points)
-            # print("current_point:", current_point)
-            # print("right_point_index:", right_point_index)
-            # print("left_point_index:", left_point_index)
 
             if left_point_index == 0:
                 boundary_points = boundary_points[:(right_point_index % len(boundary_points)) +1] + [current_point]
@@ -117,61 +106,3 @@ def graham_scan():
                 boundary_points = boundary_points[:right_point_index+1] + [current_point] + boundary_points[left_point_index:len(boundary_points)]
     print(boundary_points)
     return boundary_points
-
-
-
-def on_click_canvas(point):
-    global state, points, action, moving_point, time
-
-    points.append(point)
-
-
-def callback(event):
-    canvas.focus_set()
-    on_click_canvas([event.x, event.y])
-
-def key(event):
-    global action, boundary_points, center
-
-    action = 'start' if action == 'stop' else 'stop'
-    print(action)
-
-    if action == 'start':
-        boundary_points = graham_scan()
-
-canvas = Canvas(root, width=1000, height=600, bg='white')
-canvas.bind("<Button-1>", callback)
-canvas.bind("<Key>", key)
-canvas.pack()
-
-def draw():
-    global time
-    if  action == 'start':
-        canvas.delete('all')
-    for point in points:
-        canvas.create_text(point[0], point[1] + 15, text=point)
-        canvas.create_oval(point[0] - 3,
-                                                    point[1] - 3,
-                                                    point[0] + 3,
-                                                    point[1] + 3,
-                                                    fill="#3c32a8")
-    for i in range(0, len(boundary_points)):
-        right_index = (i + 1) % len(boundary_points)
-
-        canvas.create_oval(boundary_points[i][0] - 3,
-                                                    boundary_points[i][1] - 3,
-                                                    boundary_points[i][0] + 3,
-                                                    boundary_points[i][1] + 3,
-                                                    fill="#a83e32")
-        canvas.create_line(boundary_points[i][0],
-                                                    boundary_points[i][1],
-                                                    boundary_points[right_index][0],
-                                                    boundary_points[right_index][1],
-                                                    fill="#900C3F")
-
-    root.after(50, draw)
-
-
-draw()
-
-root.mainloop()
